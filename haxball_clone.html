@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HaxBall Clone - Online Futbol</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            border: 4px solid #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+            background: #2d8a2f;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .score-board {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 24px;
+            font-weight: bold;
+            pointer-events: auto;
+        }
+
+        .team-info {
+            position: absolute;
+            top: 80px;
+            width: 200px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            pointer-events: auto;
+        }
+
+        .team-red {
+            left: 20px;
+            border-left: 4px solid #ff4444;
+        }
+
+        .team-blue {
+            right: 20px;
+            border-right: 4px solid #4444ff;
+        }
+
+        .player-list {
+            margin-top: 10px;
+        }
+
+        .player {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px;
+            margin: 2px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .player:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .player.active {
+            background: rgba(0, 255, 0, 0.3);
+        }
+
+        .player.substitute {
+            background: rgba(255, 255, 0, 0.2);
+        }
+
+        .sub-btn {
+            background: #ff6b35;
+            border: none;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            pointer-events: auto;
+        }
+
+        .connection-status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+            pointer-events: auto;
+        }
+
+        .online-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #00ff00;
+            margin-right: 5px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .substitution-modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #fff;
+            display: none;
+            pointer-events: auto;
+            z-index: 100;
+        }
+
+        .modal-active {
+            display: block !important;
+        }
+
+        .substitution-animation {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            z-index: 50;
+        }
+
+        .chat-box {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+            padding: 10px;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+
+        .chat-input {
+            width: 100%;
+            padding: 5px;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .game-stats {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+        
+        <div class="ui-overlay">
+            <div class="score-board">
+                <span style="color: #ff4444;">Kırmızı</span> 
+                <span id="redScore">0</span> - <span id="blueScore">0</span> 
+                <span style="color: #4444ff;">Mavi</span>
+            </div>
+
+            <div class="connection-status">
+                <div class="online-indicator"></div>
+                Online: <span id="playerCount">8</span> oyuncu
+            </div>
+
+            <div class="team-info team-red">
+                <h3 style="color: #ff4444;">🔴 Kırmızı Takım</h3>
+                <div class="player-list" id="redTeam">
+                    <div class="player active" data-player="0">
+                        <span>Oyuncu 1</span>
+                        <button class="sub-btn" onclick="substitutePlayer('red', 0)">DEĞİŞ</button>
+                    </div>
+                    <div class="player active" data-player="1">
+                        <span>Oyuncu 2</span>
+                        <button class="sub-btn" onclick="substitutePlayer('red', 1)">DEĞİŞ</button>
+                    </div>
+                    <div class="player substitute" data-player="2">
+                        <span>Yedek 1</span>
+                        <button class="sub-btn" onclick="substitutePlayer('red', 2)">GİR</button>
+                    </div>
+                    <div class="player substitute" data-player="3">
+                        <span>Yedek 2</span>
+                        <button class="sub-btn" onclick="substitutePlayer('red', 3)">GİR</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="team-info team-blue">
+                <h3 style="color: #4444ff;">🔵 Mavi Takım</h3>
+                <div class="player-list" id="blueTeam">
+                    <div class="player active" data-player="0">
+                        <span>Oyuncu 3</span>
+                        <button class="sub-btn" onclick="substitutePlayer('blue', 0)">DEĞİŞ</button>
+                    </div>
+                    <div class="player active" data-player="1">
+                        <span>Oyuncu 4</span>
+                        <button class="sub-btn" onclick="substitutePlayer('blue', 1)">DEĞİŞ</button>
+                    </div>
+                    <div class="player substitute" data-player="2">
+                        <span>Yedek 3</span>
+                        <button class="sub-btn" onclick="substitutePlayer('blue', 2)">GİR</button>
+                    </div>
+                    <div class="player substitute" data-player="3">
+                        <span>Yedek 4</span>
+                        <button class="sub-btn" onclick="substitutePlayer('blue', 3)">GİR</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <strong>Kontroller:</strong> WASD veya Ok tuşları - Hareket | SPACE - Şut/Pas
+            </div>
+
+            <div class="chat-box">
+                <div class="chat-messages" id="chatMessages">
+                    <div style="color: #888;">Oyun başladı! Bol şans!</div>
+                    <div style="color: #ffaa00;">Oyuncu1: glhf!</div>
+                    <div style="color: #aaffaa;">Oyuncu3: Let's go!</div>
+                </div>
+                <input type="text" class="chat-input" placeholder="Mesaj yaz..." id="chatInput">
+            </div>
+
+            <div class="game-stats">
+                <div>Süre: <span id="gameTime">00:00</span></div>
+                <div>Ping: <span id="ping">45</span>ms</div>
+                <div>FPS: <span id="fps">60</span></div>
+            </div>
+        </div>
+
+        <div class="substitution-modal" id="substitutionModal">
+            <h3>Oyuncu Değişikliği</h3>
+            <p id="substitutionText">Oyuncu değişikliği yapılıyor...</p>
+            <div style="margin-top: 20px;">
+                <button onclick="confirmSubstitution()" style="margin-right: 10px; padding: 10px 20px; background: green; border: none; color: white; border-radius: 5px; cursor: pointer;">Onayla</button>
+                <button onclick="cancelSubstitution()" style="padding: 10px 20px; background: red; border: none; color: white; border-radius: 5px; cursor: pointer;">İptal</button>
+            </div>
+        </div>
+
+        <div class="substitution-animation" id="substitutionAnimation">
+            <div style="text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 20px;">⚽</div>
+                <div>Oyuncu Değişikliği</div>
+                <div id="substitutionDetails" style="margin-top: 10px; font-size: 18px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Oyun değişkenleri
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Oyun durumu
+        let gameState = {
+            ball: { x: 400, y: 200, vx: 0, vy: 0, radius: 8 },
+            players: {
+                red: [
+                    { x: 150, y: 180, vx: 0, vy: 0, active: true, name: 'Oyuncu 1' },
+                    { x: 150, y: 220, vx: 0, vy: 0, active: true, name: 'Oyuncu 2' },
+                    { x: 50, y: 150, vx: 0, vy: 0, active: false, name: 'Yedek 1' },
+                    { x: 50, y: 250, vx: 0, vy: 0, active: false, name: 'Yedek 2' }
+                ],
+                blue: [
+                    { x: 650, y: 180, vx: 0, vy: 0, active: true, name: 'Oyuncu 3' },
+                    { x: 650, y: 220, vx: 0, vy: 0, active: true, name: 'Oyuncu 4' },
+                    { x: 750, y: 150, vx: 0, vy: 0, active: false, name: 'Yedek 3' },
+                    { x: 750, y: 250, vx: 0, vy: 0, active: false, name: 'Yedek 4' }
+                ]
+            },
+            score: { red: 0, blue: 0 },
+            selectedPlayer: 0,
+            currentTeam: 'red',
+            gameTime: 0,
+            paused: false
+        };
+
+        // Kontroller
+        const keys = {};
+        let pendingSubstitution = null;
+
+        // Event listeners
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        // Chat sistemi
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const message = e.target.value.trim();
+                if (message) {
+                    addChatMessage('Sen', message, '#00ff00');
+                    e.target.value = '';
+                    
+                    // Simulated responses
+                    setTimeout(() => {
+                        const responses = ['Nice!', 'Good game!', 'lol', 'GG', '👍'];
+                        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                        addChatMessage('Oyuncu' + (Math.floor(Math.random() * 4) + 1), randomResponse, '#ffaa00');
+                    }, 1000 + Math.random() * 2000);
+                }
+            }
+        });
+
+        function addChatMessage(player, message, color = '#fff') {
+            const chatMessages = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.style.color = color;
+            msgDiv.innerHTML = `<strong>${player}:</strong> ${message}`;
+            chatMessages.appendChild(msgDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Oyuncu değiştirme sistemi
+        function substitutePlayer(team, playerIndex) {
+            const player = gameState.players[team][playerIndex];
+            
+            if (player.active) {
+                // Sahadan çıkarma
+                pendingSubstitution = {
+                    team: team,
+                    outPlayer: playerIndex,
+                    inPlayer: null,
+                    type: 'out'
+                };
+                document.getElementById('substitutionText').textContent = 
+                    `${player.name} sahadan çıkarılacak. Yerine girecek oyuncuyu seçin.`;
+            } else {
+                // Sahaya sokma
+                if (pendingSubstitution && pendingSubstitution.team === team && pendingSubstitution.type === 'out') {
+                    pendingSubstitution.inPlayer = playerIndex;
+                    document.getElementById('substitutionText').textContent = 
+                        `${gameState.players[team][pendingSubstitution.outPlayer].name} çıkacak, ${player.name} girecek.`;
+                } else {
+                    pendingSubstitution = {
+                        team: team,
+                        outPlayer: null,
+                        inPlayer: playerIndex,
+                        type: 'in'
+                    };
+                    document.getElementById('substitutionText').textContent = 
+                        `${player.name} sahaya girecek. Çıkacak oyuncuyu seçin.`;
+                }
+            }
+            
+            document.getElementById('substitutionModal').classList.add('modal-active');
+        }
+
+        function confirmSubstitution() {
+            if (!pendingSubstitution) return;
+            
+            const { team, outPlayer, inPlayer } = pendingSubstitution;
+            
+            if (outPlayer !== null && inPlayer !== null) {
+                // Pozisyon değişimi yap
+                const outPos = { 
+                    x: gameState.players[team][outPlayer].x, 
+                    y: gameState.players[team][outPlayer].y 
+                };
+                const inPos = { 
+                    x: gameState.players[team][inPlayer].x, 
+                    y: gameState.players[team][inPlayer].y 
+                };
+                
+                // Animasyon göster
+                showSubstitutionAnimation(
+                    gameState.players[team][outPlayer].name,
+                    gameState.players[team][inPlayer].name
+                );
+                
+                // Değişimi gerçekleştir
+                setTimeout(() => {
+                    gameState.players[team][outPlayer].active = false;
+                    gameState.players[team][inPlayer].active = true;
+                    
+                    // Pozisyonları değiştir
+                    gameState.players[team][outPlayer].x = inPos.x;
+                    gameState.players[team][outPlayer].y = inPos.y;
+                    gameState.players[team][inPlayer].x = outPos.x;
+                    gameState.players[team][inPlayer].y = outPos.y;
+                    
+                    updateTeamDisplay();
+                    addChatMessage('Sistem', 
+                        `${gameState.players[team][outPlayer].name} ↔ ${gameState.players[team][inPlayer].name}`, 
+                        '#ffff00');
+                }, 1500);
+            }
+            
+            cancelSubstitution();
+        }
+
+        function cancelSubstitution() {
+            pendingSubstitution = null;
+            document.getElementById('substitutionModal').classList.remove('modal-active');
+        }
+
+        function showSubstitutionAnimation(outPlayer, inPlayer) {
+            const animation = document.getElementById('substitutionAnimation');
+            const details = document.getElementById('substitutionDetails');
+            
+            details.textContent = `${outPlayer} ← → ${inPlayer}`;
+            animation.style.display = 'flex';
+            
+            setTimeout(() => {
+                animation.style.display = 'none';
+            }, 3000);
+        }
+
+        function updateTeamDisplay() {
+            ['red', 'blue'].forEach(team => {
+                const teamDiv = document.getElementById(team + 'Team');
+                const players = gameState.players[team];
+                
+                Array.from(teamDiv.children).forEach((playerDiv, index) => {
+                    const player = players[index];
+                    playerDiv.className = `player ${player.active ? 'active' : 'substitute'}`;
+                    
+                    const button = playerDiv.querySelector('.sub-btn');
+                    button.textContent = player.active ? 'DEĞİŞ' : 'GİR';
+                });
+            });
+        }
+
+        // Fizik ve oyun mekaniği
+        function updatePhysics() {
+            if (gameState.paused) return;
+            
+            // Oyuncu kontrolü
+            const currentPlayer = gameState.players[gameState.currentTeam][gameState.selectedPlayer];
+            const speed = 3;
+            
+            if (keys['w'] || keys['arrowup']) currentPlayer.vy = -speed;
+            else if (keys['s'] || keys['arrowdown']) currentPlayer.vy = speed;
+            else currentPlayer.vy *= 0.9;
+            
+            if (keys['a'] || keys['arrowleft']) currentPlayer.vx = -speed;
+            else if (keys['d'] || keys['arrowright']) currentPlayer.vx = speed;
+            else currentPlayer.vx *= 0.9;
+            
+            // Oyuncu pozisyon güncellemesi
+            Object.values(gameState.players).forEach(team => {
+                team.forEach(player => {
+                    if (!player.active) return;
+                    
+                    player.x += player.vx;
+                    player.y += player.vy;
+                    
+                    // Sınır kontrolü
+                    player.x = Math.max(20, Math.min(780, player.x));
+                    player.y = Math.max(20, Math.min(380, player.y));
+                    
+                    // Sürtünme
+                    player.vx *= 0.95;
+                    player.vy *= 0.95;
+                });
+            });
+            
+            // Top fiziği
+            gameState.ball.x += gameState.ball.vx;
+            gameState.ball.y += gameState.ball.vy;
+            
+            // Top sınır kontrolü
+            if (gameState.ball.x <= gameState.ball.radius || gameState.ball.x >= 800 - gameState.ball.radius) {
+                gameState.ball.vx *= -0.8;
+                gameState.ball.x = Math.max(gameState.ball.radius, Math.min(800 - gameState.ball.radius, gameState.ball.x));
+            }
+            if (gameState.ball.y <= gameState.ball.radius || gameState.ball.y >= 400 - gameState.ball.radius) {
+                gameState.ball.vy *= -0.8;
+                gameState.ball.y = Math.max(gameState.ball.radius, Math.min(400 - gameState.ball.radius, gameState.ball.y));
+            }
+            
+            // Top sürtünme
+            gameState.ball.vx *= 0.98;
+            gameState.ball.vy *= 0.98;
+            
+            // Oyuncu-top çarpışması
+            Object.values(gameState.players).forEach(team => {
+                team.forEach(player => {
+                    if (!player.active) return;
+                    
+                    const dx = gameState.ball.x - player.x;
+                    const dy = gameState.ball.y - player.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 25) {
+                        const force = 0.5;
+                        gameState.ball.vx += (dx / distance) * force;
+                        gameState.ball.vy += (dy / distance) * force;
+                        
+                        // Şut/pas (Space tuşu)
+                        if (keys[' ']) {
+                            const kickForce = 8;
+                            gameState.ball.vx += (dx / distance) * kickForce;
+                            gameState.ball.vy += (dy / distance) * kickForce;
+                        }
+                    }
+                });
+            });
+            
+            // Gol kontrolü
+            if (gameState.ball.y > 150 && gameState.ball.y < 250) {
+                if (gameState.ball.x <= 10) {
+                    gameState.score.blue++;
+                    resetBall();
+                    addChatMessage('Sistem', 'GOOOL! Mavi takım!', '#4444ff');
+                } else if (gameState.ball.x >= 790) {
+                    gameState.score.red++;
+                    resetBall();
+                    addChatMessage('Sistem', 'GOOOL! Kırmızı takım!', '#ff4444');
+                }
+            }
+            
+            // Skor güncelleme
+            document.getElementById('redScore').textContent = gameState.score.red;
+            document.getElementById('blueScore').textContent = gameState.score.blue;
+        }
+
+        function resetBall() {
+            gameState.ball.x = 400;
+            gameState.ball.y = 200;
+            gameState.ball.vx = 0;
+            gameState.ball.vy = 0;
+        }
+
+        // Çizim fonksiyonu
+        function draw() {
+            // Sahayı temizle
+            ctx.fillStyle = '#2d8a2f';
+            ctx.fillRect(0, 0, 800, 400);
+            
+            // Saha çizgileri
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            
+            // Dış çizgiler
+            ctx.strokeRect(0, 0, 800, 400);
+            
+            // Orta çizgi
+            ctx.beginPath();
+            ctx.moveTo(400, 0);
+            ctx.lineTo(400, 400);
+            ctx.stroke();
+            
+            // Orta daire
+            ctx.beginPath();
+            ctx.arc(400, 200, 50, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Kale alanları
+            ctx.strokeRect(0, 150, 50, 100);
+            ctx.strokeRect(750, 150, 50, 100);
+            
+            // Ceza alanları
+            ctx.strokeRect(0, 100, 100, 200);
+            ctx.strokeRect(700, 100, 100, 200);
+            
+            // Kaleler
+            ctx.fillStyle = '#333';
+            ctx.fillRect(0, 160, 10, 80);
+            ctx.fillRect(790, 160, 10, 80);
+            
+            // Oyuncuları çiz
+            Object.entries(gameState.players).forEach(([team, players]) => {
+                players.forEach((player, index) => {
+                    if (!player.active) return;
+                    
+                    ctx.fillStyle = team === 'red' ? '#ff4444' : '#4444ff';
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Seçili oyuncu vurgusu
+                    if (team === gameState.currentTeam && index === gameState.selectedPlayer) {
+                        ctx.strokeStyle = '#ffff00';
+                        ctx.lineWidth = 3;
+                        ctx.stroke();
+                    }
+                    
+                    // Oyuncu numarası
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(index + 1, player.x, player.y + 4);
+                });
+            });
+            
+            // Topu çiz
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(gameState.ball.x, gameState.ball.y, gameState.ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Top gölgesi
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(gameState.ball.x + 2, gameState.ball.y + 2, gameState.ball.radius - 2, gameState.ball.radius - 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Ana oyun döngüsü
+        function gameLoop() {
+            updatePhysics();
+            draw();
+            
+            // Zaman güncelleme
+            gameState.gameTime += 1/60;
+            const minutes = Math.floor(gameState.gameTime / 60);
+            const seconds = Math.floor(gameState.gameTime % 60);
+            document.getElementById('gameTime').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Simulated network stats
+        setInterval(() => {
+            document.getElementById('ping').textContent = 40 + Math.floor(Math.random() * 20);
+            document.getElementById('fps').textContent = Math.floor(58 + Math.random() * 4);
+            document.getElementById('playerCount').textContent = 6 + Math.floor(Math.random() * 4);
+        }, 2000);
+
+        // Oyunu başlat
+        updateTeamDisplay();
+        gameLoop();
+        
+        // Başlangıç mesajı
+        setTimeout(() => {
+            addChatMessage('Sistem', 'Oyun başladı! İyi oyunlar!', '#00ff00');
+        }, 1000);
+    </script>
+</body>
+</html>
