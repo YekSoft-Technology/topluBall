@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TopluBall - Multiplayer Football</title>
     <style>
+        /* Genel stil ayarları */
         * {
             margin: 0;
             padding: 0;
@@ -12,7 +13,7 @@
         }
         body {
             font-family: 'Arial', sans-serif;
-            background-color: #2c2c2c; /* Deeper dark background */
+            background-color: #2c2c2c;
             color: white;
             overflow: hidden;
             display: flex;
@@ -20,6 +21,8 @@
             align-items: center;
             min-height: 100vh;
         }
+
+        /* Menü Ekranı */
         .menu-screen {
             width: 100vw;
             height: 100vh;
@@ -27,17 +30,8 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background-color: #2c2c2c; /* Consistent with body */
-            position: relative; /* For footer link */
-        }
-        .game-container {
-            width: 100vw;
-            height: 100vh;
-            position: relative;
-            display: none; /* Hidden by default */
-            justify-content: center;
-            align-items: center;
-            background-color: #2c2c2c; /* Consistent with body */
+            background-color: #2c2c2c;
+            position: relative; /* Topluyo.com kutusu için */
         }
         .logo {
             font-size: 48px;
@@ -56,26 +50,26 @@
             padding: 15px 40px;
             font-size: 18px;
             font-weight: bold;
-            border: 2px solid #666; /* Simple border */
-            border-radius: 8px; /* Slightly more rounded */
+            border: 2px solid #666;
+            border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s ease;
-            min-width: 220px; /* Wider buttons */
-            background-color: #3a3a3a; /* Darker gray */
+            min-width: 220px;
+            background-color: #3a3a3a;
             color: white;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3); /* Subtle shadow */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
         }
         .menu-btn:hover {
-            transform: translateY(-2px); /* Slight lift */
-            background-color: #4a4a4a; /* Slightly lighter on hover */
+            transform: translateY(-2px);
+            background-color: #4a4a4a;
             box-shadow: 0 6px 12px rgba(0,0,0,0.4);
         }
         .create-room {
-            background-color: #4CAF50; /* Green for create */
+            background-color: #4CAF50; /* Yeşil */
             border-color: #4CAF50;
         }
         .join-room {
-            background-color: #008CBA; /* Blue for join */
+            background-color: #008CBA; /* Mavi */
             border-color: #008CBA;
         }
         .create-room:hover {
@@ -84,44 +78,46 @@
         .join-room:hover {
             background-color: #007bb5;
         }
+
+        /* Oda Kurulumu / Odaya Katıl Modalları */
         .room-setup, .waiting-room {
             display: none;
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background-color: #2a2a2a; /* Darker background for modals */
-            padding: 35px; /* More padding */
+            background-color: #2a2a2a;
+            padding: 35px;
             border-radius: 10px;
             border: 1px solid #555;
-            min-width: 400px; /* Wider modals */
+            min-width: 400px;
             text-align: center;
             box-shadow: 0 8px 20px rgba(0,0,0,0.6);
-            z-index: 100; /* Ensure it's above other elements */
+            z-index: 100;
         }
         .room-input {
             width: 100%;
-            padding: 12px; /* More padding */
+            padding: 12px;
             margin: 10px 0;
             border: 1px solid #666;
             border-radius: 6px;
-            background-color: #3a3a3a; /* Darker input background */
+            background-color: #3a3a3a;
             color: white;
-            font-size: 17px; /* Larger font */
+            font-size: 17px;
         }
         .room-input::placeholder {
             color: rgba(255, 255, 255, 0.5);
         }
         .room-info {
             background-color: #333;
-            padding: 18px; /* More padding */
+            padding: 18px;
             border-radius: 8px;
             margin: 18px 0;
             border: 1px solid #444;
             font-size: 15px;
         }
         .invite-link {
-            background-color: rgba(76, 175, 80, 0.2); /* Greenish tint */
+            background-color: rgba(76, 175, 80, 0.2);
             padding: 10px;
             border-radius: 6px;
             word-break: break-all;
@@ -137,43 +133,43 @@
         .player-slots {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px; /* More gap */
+            gap: 20px;
             margin: 20px 0;
         }
         .team-column {
             background-color: #3a3a3a;
-            padding: 20px; /* More padding */
+            padding: 20px;
             border-radius: 10px;
             border: 1px solid #555;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         .team-red {
-            border-left: 4px solid #f44; /* Thicker border */
+            border-left: 4px solid #f44;
         }
         .team-blue {
-            border-right: 4px solid #44f; /* Thicker border */
+            border-right: 4px solid #44f;
         }
         .player-slot {
             padding: 10px;
             margin: 6px 0;
-            border-radius: 8px; /* More rounded */
+            border-radius: 8px;
             background-color: #4a4a4a;
             cursor: pointer;
             transition: background 0.1s, border 0.1s;
             font-size: 15px;
             display: flex;
             align-items: center;
-            justify-content: space-between; /* To separate player name and number */
-            border: 1px solid transparent; /* Default transparent border */
+            justify-content: space-between;
+            border: 1px solid transparent;
         }
         .player-slot:hover {
             background-color: #5a5a5a;
         }
         .player-slot.occupied {
-            background-color: rgba(76, 175, 80, 0.4); /* Green for occupied */
+            background-color: rgba(76, 175, 80, 0.4);
         }
         .player-slot.current-player {
-            background-color: rgba(255, 193, 7, 0.4); /* Yellow for current player */
+            background-color: rgba(255, 193, 7, 0.4);
             border: 2px solid #FFC107;
         }
         .player-number {
@@ -182,11 +178,22 @@
             margin-left: 10px;
             font-size: 0.9em;
         }
+
+        /* Oyun Alanı */
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: none; /* Varsayılan olarak gizli */
+            justify-content: center;
+            align-items: center;
+            background-color: #2c2c2c;
+        }
         canvas {
-            border: 3px solid #555; /* Thicker border */
+            border: 3px solid #555;
             border-radius: 8px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.6);
-            background-color: #398e41; /* Game field color */
+            background-color: #398e41; /* Saha rengi */
         }
         .ui-overlay {
             position: absolute;
@@ -202,7 +209,7 @@
             top: 25px;
             left: 50%;
             transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.8); /* Darker, less transparent */
+            background-color: rgba(0, 0, 0, 0.8);
             padding: 12px 25px;
             border-radius: 25px;
             font-size: 22px;
@@ -232,10 +239,10 @@
             animation: pulse 2s infinite;
         }
         .online-indicator.connected {
-            background-color: #4CAF50; /* Green */
+            background-color: #4CAF50; /* Yeşil */
         }
         .online-indicator.disconnected {
-            background-color: #F44336; /* Red */
+            background-color: #F44336; /* Kırmızı */
         }
         @keyframes pulse {
             0% { opacity: 1; }
@@ -246,8 +253,8 @@
             position: absolute;
             bottom: 25px;
             right: 25px;
-            width: 300px; /* Wider chat */
-            height: 200px; /* Taller chat */
+            width: 300px;
+            height: 200px;
             background-color: rgba(0, 0, 0, 0.8);
             border-radius: 10px;
             padding: 10px;
@@ -294,7 +301,7 @@
             top: 25px;
             left: 25px;
             padding: 10px 18px;
-            background-color: #F44336; /* Red */
+            background-color: #F44336; /* Kırmızı */
             border: none;
             color: white;
             border-radius: 8px;
@@ -337,7 +344,7 @@
             background-color: #777;
         }
         .copy-btn {
-            background-color: #008CBA; /* Blue for copy */
+            background-color: #008CBA; /* Mavi */
             border: none;
             color: white;
             padding: 6px 10px;
@@ -351,7 +358,7 @@
             background-color: #007bb5;
         }
 
-        /* GOAL Animation */
+        /* GOAL Animasyonu */
         .goal-overlay {
             position: fixed;
             top: 0;
@@ -361,96 +368,65 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background-color: rgba(0, 0, 0, 0.4); /* Slightly transparent background */
-            z-index: 100; /* Above game, below notification */
-            pointer-events: none; /* Allows clicks to pass through */
-            opacity: 0; /* Hidden by default */
+            background-color: rgba(0, 0, 0, 0.4);
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0;
             transition: opacity 0.3s ease-out;
         }
         .goal-text {
-            font-size: 120px; /* Large size */
+            font-size: 120px;
             font-weight: extra-bold;
-            color: #FFD700; /* Gold color */
+            color: #FFD700; /* Altın rengi */
             text-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(255,215,0,0.6);
-            transform: scale(0.5); /* Start smaller */
+            transform: scale(0.5);
             opacity: 0;
-            animation: none; /* Controlled by JS */
+            animation: none;
         }
         .goal-overlay.active .goal-text {
-            animation: goal-pop 2.5s forwards cubic-bezier(0.68, -0.55, 0.265, 1.55); /* Bounce effect */
+            animation: goal-pop 2.5s forwards cubic-bezier(0.68, -0.55, 0.265, 1.55); /* Zıplama efekti */
         }
         @keyframes goal-pop {
             0% { transform: scale(0.5); opacity: 0; }
-            30% { transform: scale(1.2); opacity: 1; } /* Pop bigger */
-            50% { transform: scale(1); opacity: 1; } /* Settle */
-            70% { transform: scale(1); opacity: 1; } /* Hold */
-            100% { transform: scale(0.8); opacity: 0; } /* Fade out and slightly shrink */
+            30% { transform: scale(1.2); opacity: 1; }
+            50% { transform: scale(1); opacity: 1; }
+            70% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0; }
         }
 
-        /* Footer Link */
-        .footer-link {
+        /* Topluyo.com Önizleme Kutusu */
+        .topluyo-preview-box {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.6);
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-        .footer-link:hover {
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        /* Game Preview Box */
-        .game-preview-box {
-            width: 280px; /* Size of the preview */
-            height: 160px;
-            background-color: #1a1a1a;
-            border: 2px solid #555;
-            border-radius: 8px;
-            margin-top: 30px;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        .game-preview-box::before {
-            content: "Oyun Önizlemesi";
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 16px;
-            color: rgba(255, 255, 255, 0.7);
-            font-weight: bold;
-            z-index: 1;
-        }
-        .preview-field {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #398e41; /* Small field */
+            bottom: 20px; /* Alttan 20px boşluk */
+            right: 20px;  /* Sağdan 20px boşluk */
+            width: 250px; /* Uzun dikdörtgen */
+            height: 100px; /* Biraz yükseklik */
+            background-color: #1a1a1a; /* Koyu arka plan */
+            border: 2px solid #555; /* Hafif kenarlık */
+            border-radius: 8px; /* Köşeleri yuvarlak */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); /* Gölge efekti */
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+            z-index: 5; /* Diğer menü elemanlarının üzerinde durmasını sağlar */
         }
-        .preview-player-red, .preview-player-blue, .preview-ball {
-            position: absolute;
-            border-radius: 50%;
+        .topluyo-preview-box a {
+            color: #4CAF50; /* Yeşil link rengi */
+            text-decoration: none; /* Altı çizili olmasın */
+            font-weight: bold; /* Kalın yazı */
+            font-size: 1.1em; /* Biraz daha büyük yazı */
+            transition: color 0.2s; /* Renk geçiş efekti */
         }
-        .preview-player-red {
-            width: 18px; height: 18px; background-color: #f44;
-            left: 25%; top: 50%; margin-left: -9px; margin-top: -9px;
+        .topluyo-preview-box a:hover {
+            color: #66BB6A; /* Üzerine gelince daha açık yeşil */
         }
-        .preview-player-blue {
-            width: 18px; height: 18px; background-color: #44f;
-            right: 25%; top: 50%; margin-right: -9px; margin-top: -9px;
-        }
-        .preview-ball {
-            width: 10px; height: 10px; background-color: white;
-            top: 50%; left: 50%; margin-left: -5px; margin-top: -5px;
+        .topluyo-preview-box p {
+            font-size: 0.9em; /* Küçük yazı */
+            color: rgba(255, 255, 255, 0.7); /* Hafif şeffaf beyaz */
+            margin-bottom: 8px;
         }
     </style>
 </head>
@@ -460,18 +436,14 @@
         <div class="menu-buttons">
             <button class="menu-btn create-room" onclick="showCreateRoom()">🏠 Oda Oluştur</button>
             <button class="menu-btn join-room" onclick="showJoinRoom()">🚪 Odaya Katıl</button>
-            <div class="game-preview-box">
-                <div class="preview-field">
-                    <div class="preview-player-red"></div>
-                    <div class="preview-player-blue"></div>
-                    <div class="preview-ball"></div>
-                </div>
-            </div>
             <div style="margin-top: 20px; font-size: 14px; opacity: 0.8;">
                 Gerçek zamanlı multiplayer futbol oyunu
             </div>
         </div>
-        <a href="https://topluyo.com" target="_blank" class="footer-link">Topluyo.com</a>
+        <div class="topluyo-preview-box">
+            <p>Bizi diğer platformlarımızda da takip edin!</p>
+            <a href="https://topluyo.com" target="_blank">Topluyo.com</a>
+        </div>
     </div>
 
     <div class="room-setup" id="createRoomModal">
@@ -575,142 +547,200 @@
     </div>
 
     <script>
-        // WebSocket bağlantısı
+        // WebSocket sunucusunun URL'si
         const WS_SERVER_URL = 'wss://1d28adfe-0159-46b2-a9a0-9f25bfcf2b8d-00-3gqwvcp4o7ia5.sisko.replit.dev/';
-        let ws = null; // WebSocket'i burada tanımlıyoruz
+        let ws = null; // WebSocket bağlantısını tutacak değişken
 
-        // Oyun durumu
+        // Oyun durumu değişkenleri
         let gameState = {
             currentScreen: 'menu',
             isHost: false,
             roomId: null,
             playerId: null,
             playerName: '',
-            playerNumber: null, // New: player's assigned number
+            playerNumber: null, // Oyuncunun atanmış numarası
             currentTeam: null,
             currentSlot: null,
-            ball: { x: 400, y: 200, vx: 0, vy: 0, radius: 8 },
-            players: {}, // Stores all player data, including their numbers
-            score: { red: 0, blue: 0 },
+            ball: { x: 400, y: 200, vx: 0, vy: 0, radius: 8 }, // Topun konumu ve hızı
+            players: {}, // Tüm oyuncu verileri
+            score: { red: 0, blue: 0 }, // Skorlar
             gameStarted: false,
             lastPingTime: 0,
             ping: 0,
-            keys: {}, // For local player movement
+            keys: {}, // Yerel oyuncu hareketleri için tuş durumu
             canvas: null,
             ctx: null
         };
-        let isConnected = false; // Bağlantı durumunu izlemek için
+        let isConnected = false; // Bağlantı durumunu gösteren bayrak
 
-        // Canvas setup
+        // HTML yüklenince çalışacak kısım
         document.addEventListener('DOMContentLoaded', () => {
             gameState.canvas = document.getElementById('gameCanvas');
             gameState.ctx = gameState.canvas.getContext('2d');
-            setupInputListeners(); // Setup event listeners for input
+            setupInputListeners(); // Tuş dinleyicilerini ayarla
         });
 
-        // URL parametrelerini kontrol et (davet linki)
+        // URL'den davet kodu kontrolü (Eğer bir davet linkinden gelindiyse)
         const urlParams = new URLSearchParams(window.location.search);
         const inviteRoomId = urlParams.get('room');
         if (inviteRoomId) {
             document.getElementById('joinRoomId').value = inviteRoomId;
-            showJoinRoom();
+            showJoinRoom(); // Doğrudan odaya katıl modalını göster
         }
 
-        // Menü fonksiyonları
+        // --- Menü ve Ekran Geçiş Fonksiyonları ---
+
         function showCreateRoom() {
             document.getElementById('createRoomModal').style.display = 'block';
-            document.getElementById('playerName').focus();
+            document.getElementById('playerName').focus(); // Oyuncu adı girişine odaklan
         }
         function showJoinRoom() {
             document.getElementById('joinRoomModal').style.display = 'block';
-            document.getElementById('joinPlayerName').focus();
+            document.getElementById('joinPlayerName').focus(); // Oyuncu adı girişine odaklan
         }
         function hideModals() {
             document.getElementById('createRoomModal').style.display = 'none';
             document.getElementById('joinRoomModal').style.display = 'none';
         }
 
-        // Oda oluşturma
+        function showWaitingRoom() {
+            document.getElementById('menuScreen').style.display = 'none';
+            document.getElementById('waitingRoom').style.display = 'block';
+            gameState.currentScreen = 'waiting';
+        }
+
+        function showGameScreen() {
+            document.getElementById('waitingRoom').style.display = 'none';
+            document.getElementById('gameContainer').style.display = 'flex';
+            gameState.currentScreen = 'game';
+        }
+
+        // --- Oda Yönetimi Fonksiyonları ---
+
+        // Yeni oda oluşturma
         function createRoom() {
             const roomName = document.getElementById('roomName').value.trim();
             const playerName = document.getElementById('playerName').value.trim();
             const password = document.getElementById('roomPassword').value;
             const isPublic = document.getElementById('publicRoom').checked;
+
             if (!roomName || !playerName) {
-                showNotification('❌ Oda adı ve oyuncu adı gerekli!');
+                showNotification('❌ Oda adı ve oyuncu adı boş bırakılamaz!');
                 return;
             }
-            // WebSocket bağlantısını başlat
+            // WebSocket bağlantısını başlat ve sunucuya oda oluşturma isteği gönder
             connectToServer(roomName, playerName, password, true, isPublic);
             gameState.playerName = playerName;
             gameState.isHost = true;
             hideModals();
             showWaitingRoom();
-            showNotification('✅ Oda oluşturuluyor...');
+            showNotification('✅ Oda oluşturuluyor, lütfen bekleyin...');
         }
 
-        // Odaya katılma
+        // Mevcut odaya katılma
         function joinRoom() {
             const roomId = document.getElementById('joinRoomId').value.trim();
             const playerName = document.getElementById('joinPlayerName').value.trim();
             const password = document.getElementById('joinPassword').value;
+
             if (!roomId || !playerName) {
-                showNotification('❌ Oda ID ve oyuncu adı gerekli!');
+                showNotification('❌ Oda ID ve oyuncu adı boş bırakılamaz!');
                 return;
             }
+
             let extractedRoomId = roomId;
-            // Extract room ID from a full invite link if provided
+            // Eğer tam bir davet linki yapıştırıldıysa, oda ID'sini ayıkla
             if (roomId.includes('room=')) {
                 extractedRoomId = roomId.split('room=')[1].split('&')[0];
             }
 
-            // WebSocket bağlantısını başlat
-            // When joining, roomName is not sent, only roomId
+            // WebSocket bağlantısını başlat ve sunucuya odaya katılma isteği gönder
             connectToServer(extractedRoomId, playerName, password, false);
-
             gameState.playerName = playerName;
             gameState.isHost = false;
             hideModals();
             showWaitingRoom();
-            showNotification('✅ Odaya bağlanılıyor...');
+            showNotification('✅ Odaya bağlanılıyor, lütfen bekleyin...');
         }
 
-        // --- WebSocket Bağlantısı ve Mesaj İşleme ---
+        function leaveGame() { // Oyun içinden bekleme odasına dön
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'leaveGame', roomId: gameState.roomId, playerId: gameState.playerId }));
+            }
+            document.getElementById('gameContainer').style.display = 'none';
+            document.getElementById('waitingRoom').style.display = 'block';
+            gameState.currentScreen = 'waiting';
+            gameState.gameStarted = false;
+        }
+
+        function leaveRoom() { // Odadan tamamen ayrıl ve ana menüye dön
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'leaveRoom', roomId: gameState.roomId, playerId: gameState.playerId }));
+                ws.close(); // WebSocket bağlantısını kapat
+            }
+            // Ekranları ve oyun durumunu sıfırla
+            document.getElementById('waitingRoom').style.display = 'none';
+            document.getElementById('gameContainer').style.display = 'none';
+            document.getElementById('menuScreen').style.display = 'flex';
+            gameState.currentScreen = 'menu';
+
+            // Oyun durumunu tamamen sıfırla
+            gameState.roomId = null;
+            gameState.playerId = null;
+            gameState.playerName = '';
+            gameState.playerNumber = null;
+            gameState.players = {};
+            gameState.currentTeam = null;
+            gameState.currentSlot = null;
+            gameState.gameStarted = false;
+            ws = null; // WebSocket bağlantısını null yap
+            isConnected = false; // Bağlantı durumunu sıfırla
+            // Input alanlarını temizle
+            document.getElementById('roomName').value = '';
+            document.getElementById('playerName').value = '';
+            document.getElementById('joinRoomId').value = '';
+            document.getElementById('joinPlayerName').value = '';
+        }
+
+        // --- WebSocket Bağlantı ve Mesaj İşleme ---
+
         function connectToServer(roomOrId, playerName, password, isHost, isPublic = false) {
-            if (ws) { // Eğer zaten bir bağlantı varsa kapat
+            if (ws) { // Zaten bir bağlantı varsa eskisini kapat
                 ws.close();
             }
             ws = new WebSocket(WS_SERVER_URL);
 
             ws.onopen = () => {
-                console.log('Sunucuya bağlandı!');
+                console.log('Sunucuya başarıyla bağlandı!');
                 isConnected = true;
+                // Bağlantı durum göstergesini güncelle
                 document.getElementById('connectionIndicator').className = 'online-indicator connected';
                 document.getElementById('connectionStatus').textContent = 'Bağlı';
 
-                // Bağlantı kurulduğunda sunucuya ilk mesajı gönder
+                // Sunucuya ilk mesajı gönder (oda oluşturma veya odaya katılma)
                 const message = {
                     type: isHost ? 'createRoom' : 'joinRoom',
-                    roomName: isHost ? roomOrId : undefined, // Only for creation
-                    roomId: isHost ? undefined : roomOrId, // Only for joining
+                    roomName: isHost ? roomOrId : undefined, // Sadece oda oluştururken gönder
+                    roomId: isHost ? undefined : roomOrId,   // Sadece odaya katılırken gönder
                     playerName: playerName,
                     password: password,
                     isPublic: isPublic
                 };
                 ws.send(JSON.stringify(message));
 
-                // Ping göndermeye başla
+                // Her saniye ping göndermeye başla
                 setInterval(sendPing, 1000);
             };
 
             ws.onmessage = (event) => {
                 const message = JSON.parse(event.data);
-                handleServerMessage(message);
+                handleServerMessage(message); // Gelen mesajı işle
             };
 
             ws.onclose = () => {
                 console.log('Sunucu bağlantısı kesildi.');
                 isConnected = false;
+                // Bağlantı durum göstergesini güncelle
                 document.getElementById('connectionIndicator').className = 'online-indicator disconnected';
                 document.getElementById('connectionStatus').textContent = 'Bağlantı kesildi';
                 showNotification('⛔ Sunucu bağlantısı kesildi. Menüye dönülüyor.');
@@ -719,91 +749,93 @@
 
             ws.onerror = (error) => {
                 console.error('WebSocket hatası:', error);
-                showNotification('❌ Bağlantı hatası oluştu. Tekrar deneyin.');
-                leaveRoom();
+                showNotification('❌ Bağlantı hatası oluştu. Lütfen tekrar deneyin.');
+                leaveRoom(); // Hata durumunda menüye dön
             };
         }
 
+        // Sunucudan gelen mesajları işleme
         function handleServerMessage(message) {
             switch (message.type) {
                 case 'roomCreated':
                 case 'roomJoined':
                     gameState.roomId = message.roomId;
                     gameState.playerId = message.playerId;
-                    gameState.playerNumber = message.playerNumber; // Store player's own number
+                    gameState.playerNumber = message.playerNumber; // Oyuncunun kendi numarasını kaydet
                     document.getElementById('displayRoomId').textContent = gameState.roomId;
+                    // Davet linkini oluştur ve göster
                     document.getElementById('inviteLink').textContent = `${window.location.origin}${window.location.pathname}?room=${gameState.roomId}`;
                     document.getElementById('roomTitle').textContent = `Oda: ${message.roomName || message.roomId}`;
-                    updatePlayerSlots(message.players); // Initial player update
+                    updatePlayerSlots(message.players); // Oyuncu slotlarını güncelle
                     showNotification(message.type === 'roomCreated' ? '✅ Oda başarıyla oluşturuldu!' : '✅ Odaya başarıyla katıldınız!');
                     break;
                 case 'updatePlayers':
-                    updatePlayerSlots(message.players);
+                    updatePlayerSlots(message.players); // Oyuncu listesi güncellendi
                     break;
                 case 'chatMessage':
-                    addChatMessage(message.sender, message.text, message.color);
+                    addChatMessage(message.sender, message.text, message.color); // Sohbet mesajını ekle
                     break;
                 case 'gameStarted':
                     gameState.gameStarted = true;
                     showGameScreen();
-                    initializeGame(); // Start game rendering loop
+                    initializeGame(); // Oyun döngüsünü başlat
                     showNotification('🎮 Oyun başladı!');
                     break;
                 case 'gameUpdate':
-                    // Update ball and score
+                    // Top ve skor bilgilerini güncelle
                     gameState.ball = message.ball;
                     gameState.score = message.score;
 
-                    // Update other players' positions received from server
+                    // Diğer oyuncuların konumlarını sunucudan gelen verilerle güncelle
                     for (const id in message.players) {
-                        // Only update if it's not the current player (current player's movement is local input)
-                        // Or if the server is authoritative for all positions (recommended for multiplayer)
-                        // For simplicity, we'll update all for now, assuming server sends all positions
+                        // Kendi oyuncumuzun hareketini lokal olarak güncelliyoruz, diğerlerini sunucudan alıyoruz
+                        // Ancak basitlik için, sunucu tüm pozisyonları gönderiyorsa hepsini güncelleyebiliriz.
+                        // Bu oyunda sunucu pozisyonlar için yetkilidir.
                         gameState.players[id] = { ...gameState.players[id], ...message.players[id] };
                     }
-                    updateScoreBoard();
+                    updateScoreBoard(); // Skorbordu güncelle
                     break;
                 case 'goalScored':
-                    // Trigger GOAL animation
-                    displayGoal();
-                    // Optional: Play a goal sound
+                    displayGoal(); // GOAL animasyonunu göster
+                    // İsteğe bağlı: Gol sesi çal
                     break;
                 case 'ping':
-                    // Sunucuya geri pong gönder
+                    // Sunucuya geri 'pong' göndererek ping süresini ölçmesini sağla
                     ws.send(JSON.stringify({ type: 'pong', timestamp: message.timestamp }));
                     break;
                 case 'pong':
-                    // Ping süresini hesapla
+                    // Ping süresini hesapla ve ekranda göster
                     gameState.ping = Date.now() - message.timestamp;
                     document.getElementById('ping').textContent = gameState.ping;
                     break;
                 case 'error':
                     showNotification('❗ ' + message.message);
-                    leaveRoom();
+                    leaveRoom(); // Hata durumunda odadan ayrıl
                     break;
             }
         }
 
         function sendPing() {
+            // Sunucuya ping mesajı gönder
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
             }
         }
 
-        // Takıma katılma (sunucuya bildirmeli)
+        // Takıma katılma ve slot seçimi (sunucuya bildirilmeli)
         function joinTeam(team, slot) {
             if (!ws || ws.readyState !== WebSocket.OPEN) {
                 showNotification('❗ Sunucuya bağlı değilsiniz.');
                 return;
             }
             const slotElement = document.querySelector(`[data-team="${team}"][data-slot="${slot}"]`);
-            // Prevent joining an occupied slot that isn't your own
+            // Dolu ve kendine ait olmayan bir slota katılmayı engelle
             if (slotElement.classList.contains('occupied') && !slotElement.classList.contains('current-player')) {
                 showNotification('❗ Bu slot dolu.');
                 return;
             }
 
-            // Send request to server to join this slot
+            // Sunucuya slot değiştirme isteği gönder
             ws.send(JSON.stringify({
                 type: 'joinSlot',
                 roomId: gameState.roomId,
@@ -812,7 +844,7 @@
                 team: team,
                 slot: slot
             }));
-            // Server will send back an 'updatePlayers' message upon success
+            // Sunucu başarılı olursa 'updatePlayers' mesajı gönderecek
         }
 
         // Sunucudan gelen oyuncu listesine göre UI'yi güncelle
@@ -824,10 +856,10 @@
                 const playerNumberSpan = slotEl.querySelector('.player-number');
                 const slot = slotEl.dataset.slot;
                 slotDiv.textContent = `Oyuncu ${parseInt(slot) + 1}: Boş`;
-                playerNumberSpan.textContent = ''; // Clear number
+                playerNumberSpan.textContent = ''; // Numarayı temizle
             });
 
-            // Re-initialize gameState.players to ensure it matches server state
+            // gameState.players objesini sunucu durumuyla eşleşecek şekilde sıfırla
             gameState.players = {};
             let currentPlayerFound = false;
 
@@ -841,7 +873,7 @@
                     const playerNumberSpan = slotElement.querySelector('.player-number');
 
                     slotDiv.textContent = `Oyuncu ${parseInt(player.slot) + 1}: ${player.name}`;
-                    if (player.number) { // Display player number if available
+                    if (player.number) { // Oyuncu numarası varsa göster
                         playerNumberSpan.textContent = `(#${player.number})`;
                     } else {
                         playerNumberSpan.textContent = '';
@@ -851,22 +883,22 @@
                         slotElement.classList.add('current-player');
                         gameState.currentTeam = player.team;
                         gameState.currentSlot = player.slot;
-                        gameState.playerNumber = player.number; // Ensure local state also has player number
+                        gameState.playerNumber = player.number; // Kendi oyuncumuzun numarasını güncelle
                         currentPlayerFound = true;
                     }
-                    gameState.players[playerId] = player; // Add/update player in gameState
+                    gameState.players[playerId] = player; // Oyuncuyu gameState'e ekle/güncelle
                 }
             }
-            // Eğer kendi oyuncumuz için bir slot bulamazsak, slot bilgilerini sıfırla
+            // Eğer kendi oyuncumuz için bir slot bulamazsak (örn: sunucudan atıldık), slot bilgilerini sıfırla
             if (!currentPlayerFound) {
                 gameState.currentTeam = null;
                 gameState.currentSlot = null;
             }
-            updatePlayerCount();
-            updateStartButton();
+            updatePlayerCount(); // Oyuncu sayısını güncelle
+            updateStartButton(); // Oyunu Başlat düğmesini güncelle
         }
 
-        // Oyun başlatma (sunucuya istek gönder)
+        // Oyunu başlatma (sadece oda sahibi yapabilir)
         function startGame() {
             if (!gameState.isHost) {
                 showNotification('❌ Oyunu sadece oda sahibi başlatabilir!');
@@ -876,74 +908,18 @@
                 showNotification('❗ Sunucuya bağlı değilsiniz.');
                 return;
             }
-            // Check if at least one player is on each team, or minimum 2 players total.
-            const redPlayers = Object.values(gameState.players).filter(p => p.team === 'red').length;
-            const bluePlayers = Object.values(gameState.players).filter(p => p.team === 'blue').length;
-
+            // Oyunu başlatmak için en az 2 oyuncu olmalı
             if (Object.keys(gameState.players).length < 2) {
                 showNotification('❌ Oyunu başlatmak için en az 2 oyuncu gerekli!');
                 return;
             }
-            // Optional: You might want to enforce at least one player per team
-            // if (redPlayers === 0 || bluePlayers === 0) {
-            //     showNotification('❌ Her takımda en az bir oyuncu olmalı!');
-            //     return;
-            // }
 
+            // Sunucuya oyunu başlatma isteği gönder
             ws.send(JSON.stringify({ type: 'startGame', roomId: gameState.roomId }));
         }
 
-        // Ekran geçişleri
-        function showWaitingRoom() {
-            document.getElementById('menuScreen').style.display = 'none';
-            document.getElementById('waitingRoom').style.display = 'block';
-            gameState.currentScreen = 'waiting';
-        }
+        // --- Yardımcı Fonksiyonlar ---
 
-        function showGameScreen() {
-            document.getElementById('waitingRoom').style.display = 'none';
-            document.getElementById('gameContainer').style.display = 'flex';
-            gameState.currentScreen = 'game';
-        }
-
-        function leaveGame() { // Oyundan odaya dön
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'leaveGame', roomId: gameState.roomId, playerId: gameState.playerId }));
-            }
-            document.getElementById('gameContainer').style.display = 'none';
-            document.getElementById('waitingRoom').style.display = 'block';
-            gameState.currentScreen = 'waiting';
-            gameState.gameStarted = false;
-        }
-
-        function leaveRoom() { // Odadan tamamen ayrıl
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'leaveRoom', roomId: gameState.roomId, playerId: gameState.playerId }));
-                ws.close();
-            }
-            document.getElementById('waitingRoom').style.display = 'none';
-            document.getElementById('gameContainer').style.display = 'none'; // Oyun ekranındaysa kapat
-            document.getElementById('menuScreen').style.display = 'flex';
-            gameState.currentScreen = 'menu';
-
-            // Durumu sıfırla
-            gameState.roomId = null;
-            gameState.playerId = null;
-            gameState.playerName = '';
-            gameState.playerNumber = null;
-            gameState.players = {};
-            gameState.currentTeam = null;
-            gameState.currentSlot = null;
-            gameState.gameStarted = false;
-            ws = null; // WebSocket bağlantısını null yap
-            isConnected = false; // Bağlantı durumunu sıfırla
-            document.getElementById('roomName').value = ''; // Oda adı inputunu temizle
-            document.getElementById('playerName').value = ''; // Oyuncu adı inputunu temizle
-            document.getElementById('joinRoomId').value = ''; // Oda ID inputunu temizle
-            document.getElementById('joinPlayerName').value = ''; // Katıl oyuncu adı inputunu temizle
-        }
-
-        // Yardımcı fonksiyonlar
         function updatePlayerCount() {
             const count = Object.keys(gameState.players).length;
             document.getElementById('currentPlayers').textContent = count;
@@ -951,24 +927,24 @@
 
         function updateStartButton() {
             const startBtn = document.getElementById('startBtn');
-            // Only host can start and if there are at least 2 players
+            // Sadece oda sahibi ve en az 2 oyuncu varken başlat düğmesi aktif olur
             startBtn.disabled = !gameState.isHost || Object.keys(gameState.players).length < 2;
         }
 
-        // Davet linki kopyalama
+        // Davet linkini kopyala
         function copyInviteLink() {
             const inviteLink = `${window.location.origin}${window.location.pathname}?room=${gameState.roomId}`;
             navigator.clipboard.writeText(inviteLink).then(() => {
-                showNotification('📋 Davet linki kopyalandı!');
+                showNotification('📋 Davet linki panoya kopyalandı!');
             }).catch(() => {
-                showNotification('❌ Kopyalama başarısız!');
+                showNotification('❌ Kopyalama başarısız oldu!');
             });
         }
 
-        // Bildirim sistemi
+        // --- Bildirim Sistemi ---
         let notificationTimeout;
         function showNotification(message, duration = 3000) {
-            clearTimeout(notificationTimeout); // Clear any existing timeout
+            clearTimeout(notificationTimeout); // Mevcut zamanlayıcıyı temizle
             document.getElementById('notificationText').textContent = message;
             document.getElementById('notification').style.display = 'block';
 
@@ -981,14 +957,14 @@
             document.getElementById('notification').style.display = 'none';
         }
 
-        // --- Chat Functions ---
+        // --- Sohbet Fonksiyonları ---
         const chatInput = document.getElementById('chatInput');
         const chatMessagesDiv = document.getElementById('chatMessages');
 
         chatInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && chatInput.value.trim() !== '') {
                 sendChatMessage(chatInput.value.trim());
-                chatInput.value = '';
+                chatInput.value = ''; // Mesaj gönderildikten sonra inputu temizle
             }
         });
 
@@ -1009,43 +985,42 @@
             const msgElement = document.createElement('div');
             msgElement.innerHTML = `<strong>${sender}:</strong> <span style="color:${color}">${text}</span>`;
             chatMessagesDiv.appendChild(msgElement);
-            chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight; // Scroll to bottom
+            chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight; // En yeni mesaja kaydır
         }
 
-        // --- GOAL! Animation Function ---
+        // --- GOAL! Animasyon Fonksiyonu ---
         function displayGoal() {
             const goalOverlay = document.getElementById('goalOverlay');
             const goalText = goalOverlay.querySelector('.goal-text');
 
             goalOverlay.style.opacity = '1';
-            goalText.style.animation = 'none'; // Reset animation
-            void goalText.offsetWidth; // Trigger reflow
-            goalText.style.animation = ''; // Reapply animation
+            goalText.style.animation = 'none'; // Animasyonu sıfırla
+            void goalText.offsetWidth; // Tarayıcıya yeniden çizmesini söyle
+            goalText.style.animation = ''; // Animasyonu tekrar uygula
 
-            goalOverlay.classList.add('active'); // Add active class to trigger animation
+            goalOverlay.classList.add('active'); // Animasyonu tetiklemek için sınıf ekle
 
             setTimeout(() => {
-                goalOverlay.classList.remove('active'); // Remove active class after animation
+                goalOverlay.classList.remove('active'); // Animasyon bitince sınıfı kaldır
                 goalOverlay.style.opacity = '0';
-            }, 2500); // Match animation duration
+            }, 2500); // Animasyon süresiyle eşleşsin
         }
 
-
-        // --- Game Canvas & Rendering ---
+        // --- Oyun Alanı ve Çizim Fonksiyonları ---
         function initializeGame() {
             if (!gameState.ctx) {
-                console.error("Canvas context not initialized!");
+                console.error("Canvas context başlatılamadı!");
                 return;
             }
-            requestAnimationFrame(gameLoop); // Start the game rendering loop
+            requestAnimationFrame(gameLoop); // Oyun çizim döngüsünü başlat
         }
 
         function gameLoop() {
             if (gameState.gameStarted && gameState.currentScreen === 'game') {
-                updateLocalPlayerMovement(); // Update local player's movement based on input
-                drawGame();
+                updateLocalPlayerMovement(); // Yerel oyuncunun hareketini güncelle
+                drawGame(); // Oyunu çiz
             }
-            requestAnimationFrame(gameLoop);
+            requestAnimationFrame(gameLoop); // Bir sonraki kare için tekrar çağır
         }
 
         function updateLocalPlayerMovement() {
@@ -1054,21 +1029,22 @@
 
             let vx = 0;
             let vy = 0;
-            const speed = 3; // Player speed, adjust as needed
+            const speed = 3; // Oyuncu hızı
 
-            if (gameState.keys['w'] || gameState.keys['ArrowUp']) vy = -speed;
-            if (gameState.keys['s'] || gameState.keys['ArrowDown']) vy = speed;
-            if (gameState.keys['a'] || gameState.keys['ArrowLeft']) vx = -speed;
-            if (gameState.keys['d'] || gameState.keys['ArrowRight']) vx = speed;
+            // Tuşlara göre hız yönünü ayarla
+            if (gameState.keys['w'] || gameState.keys['arrowup']) vy = -speed;
+            if (gameState.keys['s'] || gameState.keys['arrowdown']) vy = speed;
+            if (gameState.keys['a'] || gameState.keys['arrowleft']) vx = -speed;
+            if (gameState.keys['d'] || gameState.keys['arrowright']) vx = speed;
 
-            // Normalize diagonal movement
+            // Köşegen hareketi normalleştir (hızın sabit kalması için)
             if (vx !== 0 && vy !== 0) {
                 const magnitude = Math.sqrt(vx * vx + vy * vy);
                 vx = (vx / magnitude) * speed;
                 vy = (vy / magnitude) * speed;
             }
 
-            // Send movement update to server (only if changed)
+            // Hareket güncellemelerini sunucuya gönder (sadece değiştiyse)
             if (player.vx !== vx || player.vy !== vy) {
                 ws.send(JSON.stringify({
                     type: 'playerMove',
@@ -1077,54 +1053,52 @@
                     vx: vx,
                     vy: vy
                 }));
-                // Optimistically update local player's velocity
+                // Yerel oyuncunun hızını tahmin et ve güncelle
                 player.vx = vx;
                 player.vy = vy;
             }
 
-            // Simulate local movement (server will correct if needed)
+            // Basit yerel hareket simülasyonu (sunucu tarafından düzeltilecek)
             player.x += player.vx;
             player.y += player.vy;
 
-            // Basic boundary checks (server should also do this)
+            // Sınır kontrolleri (sunucu da yapmalı)
             if (player.x < player.radius) player.x = player.radius;
             if (player.x > gameState.canvas.width - player.radius) player.x = gameState.canvas.width - player.radius;
             if (player.y < player.radius) player.y = player.radius;
             if (player.y > gameState.canvas.height - player.radius) player.y = gameState.canvas.height - player.radius;
         }
 
-
         function drawGame() {
             const ctx = gameState.ctx;
             const canvas = gameState.canvas;
 
-            // Clear canvas
+            // Canvas'ı temizle
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw field (background color is already set via CSS)
-            // You can draw lines here
+            // Saha çizgilerini çiz
             ctx.strokeStyle = 'white';
             ctx.lineWidth = 2;
 
-            // Center line
+            // Orta çizgi
             ctx.beginPath();
             ctx.moveTo(canvas.width / 2, 0);
             ctx.lineTo(canvas.width / 2, canvas.height);
             ctx.stroke();
 
-            // Center circle
+            // Orta daire
             ctx.beginPath();
             ctx.arc(canvas.width / 2, canvas.height / 2, 60, 0, Math.PI * 2);
             ctx.stroke();
 
-            // Goals
-            ctx.fillStyle = '#f44'; // Red goal
+            // Kaleler
+            ctx.fillStyle = '#f44'; // Kırmızı kale
             ctx.fillRect(0, canvas.height / 2 - 40, 10, 80);
-            ctx.fillStyle = '#44f'; // Blue goal
+            ctx.fillStyle = '#44f'; // Mavi kale
             ctx.fillRect(canvas.width - 10, canvas.height / 2 - 40, 10, 80);
 
 
-            // Draw Ball
+            // Topu çiz
             ctx.beginPath();
             ctx.arc(gameState.ball.x, gameState.ball.y, gameState.ball.radius, 0, Math.PI * 2);
             ctx.fillStyle = 'white';
@@ -1133,23 +1107,24 @@
             ctx.lineWidth = 1;
             ctx.stroke();
 
-            // Draw Players
+            // Oyuncuları çiz
             for (const playerId in gameState.players) {
                 const player = gameState.players[playerId];
                 if (player) {
                     ctx.beginPath();
                     ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-                    ctx.fillStyle = player.team === 'red' ? '#f44' : '#44f';
+                    ctx.fillStyle = player.team === 'red' ? '#f44' : '#44f'; // Takıma göre renk
                     ctx.fill();
                     ctx.strokeStyle = 'black';
                     ctx.lineWidth = 2;
                     ctx.stroke();
 
-                    // Draw player name and number
+                    // Oyuncu adı ve numarasını çiz
                     ctx.fillStyle = 'white';
                     ctx.font = '10px Arial';
                     ctx.textAlign = 'center';
-                    ctx.fillText(`${player.name} (#${player.number})`, player.x, player.y - player.radius - 5);
+                    const playerDisplay = player.name + (player.number ? ` (#${player.number})` : '');
+                    ctx.fillText(playerDisplay, player.x, player.y - player.radius - 5);
                 }
             }
         }
@@ -1159,22 +1134,23 @@
             document.getElementById('blueScore').textContent = gameState.score.blue;
         }
 
+        // Input dinleyicilerini ayarla (tuş basma ve bırakma)
         function setupInputListeners() {
             document.addEventListener('keydown', (e) => {
                 if (gameState.currentScreen === 'game') {
                     gameState.keys[e.key.toLowerCase()] = true;
-                    // Prevent default for game control keys if they interfere with browser
+                    // Tarayıcının varsayılan davranışlarını engelle (örn: boşluk tuşuyla sayfa kaydırma)
                     if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(e.key.toLowerCase())) {
                         e.preventDefault();
                     }
-                    if (e.key === ' ' && !gameState.keys['spacePressed']) { // Only send shot once per press
+                    if (e.key === ' ' && !gameState.keys['spacePressed']) { // Sadece bir kere şut/pas gönder
                         gameState.keys['spacePressed'] = true;
                         if (ws && ws.readyState === WebSocket.OPEN) {
                             ws.send(JSON.stringify({
                                 type: 'playerAction',
                                 roomId: gameState.roomId,
                                 playerId: gameState.playerId,
-                                action: 'shoot' // Or 'pass'
+                                action: 'shoot' // Ya da 'pass' olabilir
                             }));
                         }
                     }
