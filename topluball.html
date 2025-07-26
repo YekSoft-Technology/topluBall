@@ -664,6 +664,45 @@ function joinRoom() {
     showNotification('✅ Odaya bağlanılıyor, lütfen bekleyin...');
 }
 
+// Oyuncunun takım ve slot seçmesi
+function joinTeam(team, slot) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        showNotification('❗ Sunucuya bağlı değilsiniz.');
+        return;
+    }
+
+    // Eğer oyuncu zaten bir takımdaysa ve aynı slota tıklıyorsa hiçbir şey yapma
+    if (gameState.currentTeam === team && gameState.currentSlot === slot) {
+        return;
+    }
+
+    // Eğer slot doluysa ve tıklayan kendi oyuncumuz değilse
+    const playerSlots = document.querySelectorAll('.player-slot');
+    let isSlotOccupiedByOther = false;
+    playerSlots.forEach(s => {
+        if (s.dataset.team === team && parseInt(s.dataset.slot) === slot) {
+            if (s.classList.contains('occupied') && !s.classList.contains('current-player')) {
+                isSlotOccupiedByOther = true;
+            }
+        }
+    });
+
+    if (isSlotOccupiedByOther) {
+        showNotification('❌ Bu slot dolu!');
+        return;
+    }
+
+
+    // Sunucuya takım değiştirme isteği gönder
+    ws.send(JSON.stringify({
+        type: 'changeTeam',
+        roomId: gameState.roomId,
+        playerId: gameState.playerId,
+        team: team,
+        slot: slot
+    }));
+}
+
 // Oyunu başlatma (sadece oda sahibi yapabilir)
 function startGame() {
     if (!gameState.isHost) {
@@ -676,10 +715,21 @@ function startGame() {
     }
 
     const currentPlayersCount = Object.keys(gameState.players).length;
-    if (currentPlayersCount < 2) {
-        showNotification('❌ Oyunu başlatmak için en az 2 oyuncu gerekli!');
+    // Basit bir kontrol, örneğin 4 oyuncu gerekirse
+    if (currentPlayersCount < 4) { // Örneğin 2v2 için 4 oyuncu
+        showNotification('❌ Oyunu başlatmak için 4 oyuncu gerekli!');
         return;
     }
+
+    // Takımların dolu olduğundan emin ol
+    const redPlayers = Object.values(gameState.players).filter(p => p.team === 'red').length;
+    const bluePlayers = Object.values(gameState.players).filter(p => p.team === 'blue').length;
+
+    if (redPlayers !== 2 || bluePlayers !== 2) { // 2v2 için
+        showNotification('❌ Her takımda 2 oyuncu olmalı!');
+        return;
+    }
+
 
     // Sunucuya oyunu başlatma isteği gönder
     ws.send(JSON.stringify({ type: 'startGame', roomId: gameState.roomId }));
@@ -687,6 +737,7 @@ function startGame() {
 
 function leaveGame() { // Oyun içinden bekleme odasına dön
     if (ws && ws.readyState === WebSocket.OPEN) {
+        // Sunucuya sadece oyun bittiği bilgisini değil, oyuncunun oyundan ayrıldığı bilgisini de gönder
         ws.send(JSON.stringify({ type: 'leaveGame', roomId: gameState.roomId, playerId: gameState.playerId }));
     }
     document.getElementById('gameContainer').style.display = 'none';
@@ -779,7 +830,11 @@ function connectToServer(roomOrId, playerName, password, isHost, isPublic = fals
         ws.send(JSON.stringify(message));
 
         // Her saniye ping göndermeye başla
-        setInterval(sendPing, 1000);
+        // Mevcut interval'i temizleyip yeni bir tane başlatmak önemlidir
+        if (gameState.pingInterval) {
+            clearInterval(gameState.pingInterval);
+        }
+        gameState.pingInterval = setInterval(sendPing, 1000);
     };
 
     ws.onmessage = (event) => {
@@ -796,6 +851,9 @@ function connectToServer(roomOrId, playerName, password, isHost, isPublic = fals
         if (gameState.currentScreen !== 'menu') { // Eğer zaten menüde değilsek bildirim göster
             showNotification('⛔ Sunucu bağlantısı kesildi. Menüye dönülüyor.');
             leaveRoom(); // Bağlantı kesildiğinde menüye dön
+        }
+        if (gameState.pingInterval) { // Bağlantı kesildiğinde ping interval'ini durdur
+            clearInterval(gameState.pingInterval);
         }
     };
 
@@ -824,7 +882,13 @@ function handleServerMessage(message) {
             showNotification(message.type === 'roomCreated' ? '✅ Oda başarıyla oluşturuldu!' : '✅ Odaya başarıyla katıldınız!');
             break;
         case 'updatePlayers':
-            updatePlayerSlots(message.players); // Oyuncu listesi güncellendi
+            // Sadece odadaki oyuncuların güncel listesini al ve UI'yi güncelle
+            updatePlayerSlots(message.players);
+            // Kendi oyuncumuzun takım ve slotunu güncelle (eğer sunucu tarafından değiştirildiyse)
+            if (message.players[gameState.playerId]) {
+                gameState.currentTeam = message.players[gameState.playerId].team;
+                gameState.currentSlot = message.players[gameState.playerId].slot;
+            }
             updateStartButton(); // Oyuncu sayısı değişince başlat düğmesini güncelle
             break;
         case 'chatMessage':
@@ -842,11 +906,19 @@ function handleServerMessage(message) {
             gameState.score = message.score;
 
             // Diğer oyuncuların konumlarını sunucudan gelen verilerle güncelle
+            // Kendi oyuncumuzun hareketini lokal olarak güncelliyoruz (input ile), diğerlerini sunucudan alıyoruz.
+            // Bu oyunda sunucu pozisyonlar için yetkilidir.
             for (const id in message.players) {
-                // Kendi oyuncumuzun hareketini lokal olarak güncelliyoruz, diğerlerini sunucudan alıyoruz
-                // Ancak basitlik için, sunucu tüm pozisyonları gönderiyorsa hepsini güncelleyebiliriz.
-                // Bu oyunda sunucu pozisyonlar için yetkilidir.
-                gameState.players[id] = { ...gameState.players[id], ...message.players[id] };
+                if (id === gameState.playerId) {
+                    // Kendi oyuncumuzun pozisyonunu sunucudan gelenle senkronize et (lag'i önlemek için)
+                    gameState.players[id].x = message.players[id].x;
+                    gameState.players[id].y = message.players[id].y;
+                    gameState.players[id].vx = message.players[id].vx;
+                    gameState.players[id].vy = message.players[id].vy;
+                } else {
+                    // Diğer oyuncuları tamamen sunucu verisiyle güncelle
+                    gameState.players[id] = { ...gameState.players[id], ...message.players[id] };
+                }
             }
             updateScoreBoard(); // Skorbordu güncelle
             break;
@@ -864,327 +936,259 @@ function handleServerMessage(message) {
             document.getElementById('ping').textContent = gameState.ping;
             break;
         case 'error':
-            showNotification('❗ ' + message.message);
-            // Hata durumunda ilgili modal veya odaya dön
-            if (gameState.currentScreen === 'waiting') {
-                leaveRoom(); // Odadan atıldıysa ana menüye dön
-            } else if (gameState.currentScreen === 'game') {
-                leaveGame(); // Oyun içindeyken hata gelirse bekleme odasına dön
+            showNotification(`⚠️ Hata: ${message.message}`);
+            // Hata durumunda (örn: oda dolu, şifre yanlış) menüye geri dön
+            if (message.message.includes('Room') || message.message.includes('password')) {
+                leaveRoom();
             }
             break;
+        default:
+            console.warn('Bilinmeyen mesaj tipi:', message.type, message);
     }
 }
 
-function sendPing() {
-    // Sunucuya ping mesajı gönder
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        gameState.lastPingTime = Date.now();
-        ws.send(JSON.stringify({ type: 'ping', timestamp: gameState.lastPingTime }));
-    }
-}
-
-// --- Bekleme Odası (Lobby) Fonksiyonları ---
-
+// Oyuncu slotlarını güncelleme fonksiyonu
 function updatePlayerSlots(playersData) {
+    gameState.players = playersData; // Genel oyuncu durumunu güncelle
     const playerSlots = document.querySelectorAll('.player-slot');
-    const currentPlayersElement = document.getElementById('currentPlayers');
-    let playerCount = 0;
+    const currentPlayersCount = Object.keys(playersData).length;
+    document.getElementById('currentPlayers').textContent = currentPlayersCount;
 
-    // Tüm slotları sıfırla
-    playerSlots.forEach(slot => {
-        const team = slot.dataset.team;
-        const slotNum = parseInt(slot.dataset.slot);
-        slot.innerHTML = `<div>Oyuncu ${team === 'red' ? slotNum + 1 : slotNum + 3}: Boş</div><span class="player-number"></span>`;
-        slot.classList.remove('occupied', 'current-player');
-        // Slot tıklanabilir hale gelsin
-        slot.onclick = () => joinTeam(team, slotNum);
-    });
+    playerSlots.forEach(slotElement => {
+        const team = slotElement.dataset.team;
+        const slot = parseInt(slotElement.dataset.slot);
+        let playerFound = false;
 
-    gameState.players = {}; // Mevcut oyuncu listesini temizle
+        slotElement.classList.remove('occupied', 'current-player'); // Önceki durumları temizle
+        slotElement.querySelector('div').textContent = `Oyuncu ${slot + 1}: Boş`; // Varsayılan boş metin
+        slotElement.querySelector('.player-number').textContent = '';
 
-    // Sunucudan gelen oyuncu verilerini doldur
-    for (const id in playersData) {
-        const player = playersData[id];
-        gameState.players[id] = player; // Oyuncu verisini kaydet
-        const slotElement = document.querySelector(`.player-slot[data-team="${player.team}"][data-slot="${player.slot}"]`);
-        if (slotElement) {
-            slotElement.innerHTML = `<div>${player.name}</div><span class="player-number">P${player.playerNumber}</span>`;
-            slotElement.classList.add('occupied');
-            slotElement.onclick = null; // Dolu slota tıklanmasını engelle
-            playerCount++;
-
-            // Mevcut oyuncuyu işaretle
-            if (id === gameState.playerId) {
-                slotElement.classList.add('current-player');
-                gameState.currentTeam = player.team;
-                gameState.currentSlot = player.slot;
+        for (const playerId in playersData) {
+            const player = playersData[playerId];
+            if (player.team === team && player.slot === slot) {
+                slotElement.classList.add('occupied');
+                slotElement.querySelector('div').textContent = `Oyuncu ${slot + 1}: ${player.name}`;
+                slotElement.querySelector('.player-number').textContent = `#${player.playerNumber}`;
+                if (playerId === gameState.playerId) {
+                    slotElement.classList.add('current-player');
+                    gameState.currentTeam = team; // Kendi takım ve slotumuzu kaydet
+                    gameState.currentSlot = slot;
+                }
+                playerFound = true;
+                break;
             }
         }
-    }
-    currentPlayersElement.textContent = playerCount;
-    updateStartButton(); // Oyuncu slotları güncellendiğinde başlat düğmesini tekrar kontrol et
+    });
+
+    updateStartButton(); // Oyuncu listesi değişince başlat düğmesini güncelle
 }
 
-function joinTeam(team, slot) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-        showNotification('❗ Sunucuya bağlı değilsiniz.');
-        return;
-    }
-
-    // Zaten bu slottaysak bir şey yapma
-    if (gameState.currentTeam === team && gameState.currentSlot === slot) {
-        showNotification('ℹ️ Zaten bu slottasınız.');
-        return;
-    }
-
-    // Dolu mu kontrol et
-    const slotElement = document.querySelector(`.player-slot[data-team="${team}"][data-slot="${slot}"]`);
-    if (slotElement && slotElement.classList.contains('occupied')) {
-        showNotification('❌ Bu slot dolu! Başka bir slot seçin.');
-        return;
-    }
-
-    // Sunucuya slota katılma isteği gönder
-    ws.send(JSON.stringify({ type: 'joinSlot', roomId: gameState.roomId, playerId: gameState.playerId, team: team, slot: slot }));
-    showNotification(`✅ ${team === 'red' ? 'Kırmızı' : 'Mavi'} takımına, ${slot + 1}. slota katılma isteği gönderildi.`);
-}
-
+// Başlat düğmesini güncelle
 function updateStartButton() {
     const startBtn = document.getElementById('startBtn');
-    // Başlat düğmesi sadece oda sahibi ise VE en az 2 oyuncu varsa aktif olur
-    const currentPlayersCount = Object.keys(gameState.players).length;
-    startBtn.disabled = !gameState.isHost || currentPlayersCount < 2;
-
-    if (startBtn.disabled) {
-        if (!gameState.isHost) {
-            startBtn.textContent = 'Oyunu Başlat (Sadece Oda Sahibi)';
-        } else if (currentPlayersCount < 2) {
-            startBtn.textContent = `Oyunu Başlat (${currentPlayersCount}/2 Oyuncu)`;
+    if (gameState.isHost) {
+        const redPlayers = Object.values(gameState.players).filter(p => p.team === 'red').length;
+        const bluePlayers = Object.values(gameState.players).filter(p => p.team === 'blue').length;
+        // Başlat düğmesini, her iki takımda da 2 oyuncu varsa etkinleştir
+        if (redPlayers === 2 && bluePlayers === 2) {
+            startBtn.disabled = false;
+        } else {
+            startBtn.disabled = true;
         }
     } else {
-        startBtn.textContent = '🎮 Oyunu Başlat';
+        startBtn.disabled = true; // Host olmayanlar başlatamaz
     }
 }
 
-
-// --- Oyun Alanı (Canvas) Çizim Fonksiyonları ---
-
-function initializeGame() {
-    if (gameState.gameStarted) {
-        gameLoop(); // Oyun döngüsünü başlat
-    }
-}
-
-function gameLoop() {
-    drawBackground();
-    drawField();
-    drawBall();
-    drawPlayers();
-
-    if (gameState.gameStarted) {
-        // Her karede kendi oyuncumuzun hareketini sunucuya gönder
-        sendPlayerMovement();
-        gameState.animationFrameId = requestAnimationFrame(gameLoop);
-    }
-}
-
-function drawBackground() {
-    gameState.ctx.fillStyle = '#398e41'; // Saha rengi
-    gameState.ctx.fillRect(0, 0, gameState.canvas.width, gameState.canvas.height);
-}
-
-function drawField() {
-    const ctx = gameState.ctx;
-    const canvas = gameState.canvas;
-
-    // Ortadaki çizgi
-    ctx.beginPath();
-    ctx.moveTo(canvas.width / 2, 0);
-    ctx.lineTo(canvas.width / 2, canvas.height);
-    ctx.strokeStyle = 'white';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Orta yuvarlak
-    ctx.beginPath();
-    ctx.arc(canvas.width / 2, canvas.height / 2, 70, 0, Math.PI * 2);
-    ctx.strokeStyle = 'white';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Kale alanları
-    // Sol Kale Alanı
-    ctx.beginPath();
-    ctx.rect(0, canvas.height / 2 - 90, 80, 180);
-    ctx.strokeStyle = 'white';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Sağ Kale Alanı
-    ctx.beginPath();
-    ctx.rect(canvas.width - 80, canvas.height / 2 - 90, 80, 180);
-    ctx.strokeStyle = 'white';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Kaleler (Daha kalın çizgiler)
-    // Sol Kale
-    ctx.beginPath();
-    ctx.rect(0, canvas.height / 2 - 40, 20, 80);
-    ctx.strokeStyle = '#F44336'; // Kırmızı kale
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    // Sağ Kale
-    ctx.beginPath();
-    ctx.rect(canvas.width - 20, canvas.height / 2 - 40, 20, 80);
-    ctx.strokeStyle = '#2196F3'; // Mavi kale
-    ctx.lineWidth = 3;
-    ctx.stroke();
-}
-
-function drawBall() {
-    const ctx = gameState.ctx;
-    const ball = gameState.ball;
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-    ctx.fillStyle = 'white';
-    ctx.shadowColor = 'rgba(255, 255, 255, 0.7)';
-    ctx.shadowBlur = 10;
-    ctx.fill();
-    ctx.shadowBlur = 0; // Gölgeyi sıfırla
-}
-
-function drawPlayers() {
-    const ctx = gameState.ctx;
-    for (const id in gameState.players) {
-        const player = gameState.players[id];
-        ctx.beginPath();
-        ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-        ctx.fillStyle = player.team === 'red' ? 'red' : 'blue';
-        ctx.shadowColor = player.team === 'red' ? 'rgba(255, 0, 0, 0.7)' : 'rgba(0, 0, 255, 0.7)';
-        ctx.shadowBlur = 10;
-        ctx.fill();
-        ctx.shadowBlur = 0; // Gölgeyi sıfırla
-
-        // Oyuncu adı
-        ctx.fillStyle = 'white';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(player.name, player.x, player.y - player.radius - 5);
-    }
-}
-
+// Skorbordu güncelle
 function updateScoreBoard() {
     document.getElementById('redScore').textContent = gameState.score.red;
     document.getElementById('blueScore').textContent = gameState.score.blue;
 }
 
-// --- Klavye Girişleri ve Oyuncu Hareketi ---
-
-function setupInputListeners() {
-    document.addEventListener('keydown', (e) => {
-        if (gameState.currentScreen === 'game' && !document.getElementById('chatInput').matches(':focus')) {
-            gameState.keys[e.key.toLowerCase()] = true;
-            sendPlayerMovement(); // Her tuş basımında hareketi gönder
-        } else if (e.key === 'Enter' && document.getElementById('chatInput').matches(':focus')) {
-            sendChatMessage();
-        }
-    });
-
-    document.addEventListener('keyup', (e) => {
-        if (gameState.currentScreen === 'game' && !document.getElementById('chatInput').matches(':focus')) {
-            gameState.keys[e.key.toLowerCase()] = false;
-            sendPlayerMovement(); // Her tuş bırakmada hareketi gönder
-        }
-    });
-
-    // Sohbet kutusu için Enter tuşu
-    document.getElementById('chatInput').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            sendChatMessage();
-        }
-    });
-}
-
-function sendPlayerMovement() {
-    if (!ws || ws.readyState !== WebSocket.OPEN || !gameState.gameStarted || !gameState.playerId) {
-        return;
-    }
-
-    // Gönderilecek hareket verilerini oluştur
-    const movementData = {
-        up: gameState.keys['w'] || gameState.keys['arrowup'],
-        down: gameState.keys['s'] || gameState.keys['arrowdown'],
-        left: gameState.keys['a'] || gameState.keys['arrowleft'],
-        right: gameState.keys['d'] || gameState.keys['arrowright'],
-        action: gameState.keys[' '] // Boşluk tuşu (şut/pas)
-    };
-
-    // Sunucuya oyuncu hareketini gönder
-    ws.send(JSON.stringify({
-        type: 'playerMove',
-        roomId: gameState.roomId,
-        playerId: gameState.playerId,
-        movement: movementData
-    }));
-}
-
-// --- Sohbet Fonksiyonları ---
-
-function addChatMessage(sender, text, color = 'white') {
-    const chatMessages = document.getElementById('chatMessages');
-    const messageElement = document.createElement('div');
-    messageElement.innerHTML = `<strong style="color: ${color};">${sender}:</strong> ${text}`;
-    chatMessages.appendChild(messageElement);
-    chatMessages.scrollTop = chatMessages.scrollHeight; // En alta kaydır
-}
-
-function sendChatMessage() {
-    const chatInput = document.getElementById('chatInput');
-    const messageText = chatInput.value.trim();
-    if (messageText && ws && ws.readyState === WebSocket.OPEN && gameState.roomId) {
-        ws.send(JSON.stringify({
-            type: 'chatMessage',
-            roomId: gameState.roomId,
-            playerId: gameState.playerId,
-            message: messageText
-        }));
-        chatInput.value = ''; // Mesajı gönderdikten sonra input'u temizle
-    }
-}
-
-// --- Bildirim ve Animasyon Fonksiyonları ---
-
-function showNotification(message, duration = 3000) {
-    const notification = document.getElementById('notification');
+// Davet linki kopyalama bildirimi
+function showNotification(message) {
+    const notificationDiv = document.getElementById('notification');
     const notificationText = document.getElementById('notificationText');
     notificationText.textContent = message;
-    notification.style.display = 'block';
-    // Otomatik olarak gizle
-    setTimeout(() => {
-        hideNotification();
-    }, duration);
+    notificationDiv.style.display = 'block';
 }
 
 function hideNotification() {
     document.getElementById('notification').style.display = 'none';
 }
 
+// Gol animasyonunu göster
 function displayGoal() {
     const goalOverlay = document.getElementById('goalOverlay');
-    const goalText = document.querySelector('.goal-text');
-
-    goalOverlay.style.opacity = 1;
-    goalText.style.animation = 'none'; // Animasyonu sıfırla
-    void goalText.offsetWidth; // Reflow'u tetikle
-    goalText.style.animation = ''; // Animasyonu tekrar başlat
     goalOverlay.classList.add('active');
-
     setTimeout(() => {
-        goalOverlay.style.opacity = 0;
         goalOverlay.classList.remove('active');
-    }, 2500); // Animasyon süresi kadar bekle
+    }, 2500); // Animasyon süresi kadar sonra kaldır
+}
+
+// Sohbet mesajı ekleme
+function addChatMessage(sender, text, color) {
+    const chatMessagesDiv = document.getElementById('chatMessages');
+    const msgElement = document.createElement('div');
+    msgElement.innerHTML = `<strong style="color: ${color || 'white'};">${sender}:</strong> ${text}`;
+    chatMessagesDiv.appendChild(msgElement);
+    chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight; // En alta kaydır
+}
+
+// Sohbet girişini dinleme
+document.getElementById('chatInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        const chatInput = document.getElementById('chatInput');
+        const message = chatInput.value.trim();
+        if (message && ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'chatMessage', roomId: gameState.roomId, text: message }));
+            chatInput.value = '';
+        }
+    }
+});
+
+// --- Oyun İçi Mekanikler (Çizim ve Hareket) ---
+
+function initializeGame() {
+    // Canvas boyutlarını ayarlama (isteğe bağlı, CSS ile de yapılabilir)
+    gameState.canvas.width = 800;
+    gameState.canvas.height = 400;
+
+    // Oyun döngüsünü başlat
+    if (!gameState.animationFrameId) { // Zaten çalışmıyorsa başlat
+        gameState.animationFrameId = requestAnimationFrame(gameLoop);
+    }
+}
+
+function gameLoop() {
+    drawGame(); // Oyunu çiz
+    // Eğer oyun devam ediyorsa bir sonraki frame'i iste
+    if (gameState.gameStarted) {
+        gameState.animationFrameId = requestAnimationFrame(gameLoop);
+    }
+    sendPlayerInput(); // Tuş girdilerini sunucuya gönder
+}
+
+function drawGame() {
+    const ctx = gameState.ctx;
+    const canvas = gameState.canvas;
+
+    // Saha arka planını temizle
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#398e41'; // Saha rengi
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Saha çizgilerini çiz
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+
+    // Ortadaki daire
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, canvas.height / 2, 60, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Orta çizgi
+    ctx.beginPath();
+    ctx.moveTo(canvas.width / 2, 0);
+    ctx.lineTo(canvas.width / 2, canvas.height);
+    ctx.stroke();
+
+    // Kale direkleri ve kale alanları
+    const goalWidth = 10;
+    const goalHeight = 100;
+    const goalAreaDepth = 60;
+    const goalAreaWidth = 200;
+
+    // Sol kale alanı
+    ctx.strokeRect(0, (canvas.height - goalAreaWidth) / 2, goalAreaDepth, goalAreaWidth);
+    // Sol kale
+    ctx.fillRect(0, (canvas.height - goalHeight) / 2, goalWidth, goalHeight);
+    ctx.strokeStyle = '#fff'; // Kale rengi
+    ctx.strokeRect(0, (canvas.height - goalHeight) / 2, goalWidth, goalHeight);
+
+
+    // Sağ kale alanı
+    ctx.strokeRect(canvas.width - goalAreaDepth, (canvas.height - goalAreaWidth) / 2, goalAreaDepth, goalAreaWidth);
+    // Sağ kale
+    ctx.fillRect(canvas.width - goalWidth, (canvas.height - goalHeight) / 2, goalWidth, goalHeight);
+    ctx.strokeStyle = '#fff'; // Kale rengi
+    ctx.strokeRect(canvas.width - goalWidth, (canvas.height - goalHeight) / 2, goalWidth, goalHeight);
+
+
+    // Oyuncuları çiz
+    for (const id in gameState.players) {
+        const player = gameState.players[id];
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+        ctx.fillStyle = player.team === 'red' ? '#f44' : '#44f'; // Takım rengi
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Oyuncu adı
+        ctx.fillStyle = '#fff';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(player.name, player.x, player.y - player.radius - 5);
+    }
+
+    // Topu çiz
+    ctx.beginPath();
+    ctx.arc(gameState.ball.x, gameState.ball.y, gameState.ball.radius, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+}
+
+// Tuş dinleyicilerini ayarla
+function setupInputListeners() {
+    document.addEventListener('keydown', (e) => {
+        if (e.repeat) return;
+        if (gameState.currentScreen === 'game') {
+            gameState.keys[e.key.toLowerCase()] = true;
+            gameState.keys[e.code] = true; // Örneğin "Space" için "Space" code'unu da dinle
+        }
+    });
+
+    document.addEventListener('keyup', (e) => {
+        if (gameState.currentScreen === 'game') {
+            gameState.keys[e.key.toLowerCase()] = false;
+            gameState.keys[e.code] = false;
+        }
+    });
+
+    // Sohbet kutusuna yazarken tuşları yakalamayı önle
+    document.getElementById('chatInput').addEventListener('keydown', (e) => {
+        e.stopPropagation(); // Tuş olayının diğer dinleyicilere yayılmasını engelle
+    });
+}
+
+// Oyuncu hareket bilgilerini sunucuya gönder
+function sendPlayerInput() {
+    if (ws && ws.readyState === WebSocket.OPEN && gameState.gameStarted && gameState.playerId) {
+        const input = {
+            up: gameState.keys['w'] || gameState.keys['arrowup'],
+            down: gameState.keys['s'] || gameState.keys['arrowdown'],
+            left: gameState.keys['a'] || gameState.keys['arrowleft'],
+            right: gameState.keys['d'] || gameState.keys['arrowright'],
+            action: gameState.keys[' '], // Spacebar
+        };
+        ws.send(JSON.stringify({ type: 'playerInput', roomId: gameState.roomId, playerId: gameState.playerId, input: input }));
+    }
+    // Her gönderimden sonra action tuşunu sıfırla ki tek basışta birden fazla şut atmasın
+    gameState.keys[' '] = false;
+    gameState.keys['Space'] = false;
+}
+
+// Ping gönderme fonksiyonu
+function sendPing() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
+    }
 }
     </script>
 </body>
